@@ -1,0 +1,21 @@
+robot:
+  id: "robot_001"
+  name: "Cleaning Robot 001"
+  facility: "office_building_a"
+  model: "CleanBot-3000"
+
+mqtt:
+  broker: "localhost"
+  port: 1883
+  keepalive: 60
+  qos_telemetry: 0     # high-frequency, loss acceptable
+  qos_command: 1       # guaranteed delivery
+  qos_event: 1
+
+telemetry:
+  interval_seconds: 2  # publish telemetry every 2s
+
+navigation:
+  max_speed: 0.5       # m/s
+  map_width: 50        # meters
+  map_height: 30       # meters

@@ -1,0 +1,59 @@
+name: Lambda CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "lambda/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "lambda/**"
+
+env:
+  AWS_REGION: ap-northeast-1
+
+jobs:
+  build-deploy:
+    name: Build & Deploy Lambda
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build Lambda packages
+        run: bash lambda/build.sh
+
+      - name: Configure AWS credentials
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy Lambda functions
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          declare -A FUNCTIONS=(
+            ["telemetry-processor"]="robotops-dev-telemetry-processor"
+            ["ws-connection-manager"]="robotops-dev-ws-connect robotops-dev-ws-disconnect"
+            ["ws-event-pusher"]="robotops-dev-ws-event-pusher"
+          )
+          for dir in "${!FUNCTIONS[@]}"; do
+            for fn in ${FUNCTIONS[$dir]}; do
+              aws lambda update-function-code \
+                --function-name "$fn" \
+                --zip-file "fileb://lambda/$dir/function.zip" \
+                --region ${{ env.AWS_REGION }}
+              echo "Updated: $fn"
+            done
+          done

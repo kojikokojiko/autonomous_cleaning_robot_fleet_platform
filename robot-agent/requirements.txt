@@ -1,0 +1,5 @@
+paho-mqtt==2.0.0
+pydantic==2.7.1
+pydantic-settings==2.2.1
+structlog==24.1.0
+numpy==1.26.4

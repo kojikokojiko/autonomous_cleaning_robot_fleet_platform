@@ -1,7 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(chmod +x:*)"
+      "Bash(chmod +x:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker compose:*)",
+      "Bash(curl:*)",
+      "Bash(uv:*)",
+      "Bash(psql:*)",
+      "Bash(pkill:*)",
+      "Bash(docker restart:*)",
+      "Bash(docker stop:*)",
+      "Bash(/Users/koji.iwase/.pyenv/versions/3.12.3/bin/pip show:*)",
+      "Bash(~/.pyenv/versions/3.12.3/bin/python3.12:*)",
+      "Bash(pyenv exec:*)"
     ]
   }
 }

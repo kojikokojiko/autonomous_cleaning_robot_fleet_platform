@@ -1,10 +1,11 @@
 import { Outlet, NavLink } from "react-router-dom";
-import { Bot, Map, ListTodo, Activity } from "lucide-react";
+import { Bot, ListTodo, Activity, Cpu } from "lucide-react";
 import { clsx } from "clsx";
 
 const NAV_ITEMS = [
   { to: "/",         label: "Fleet",    icon: <Bot size={18} /> },
   { to: "/missions", label: "Missions", icon: <ListTodo size={18} /> },
+  { to: "/ota",      label: "OTA",      icon: <Cpu size={18} /> },
 ];
 
 export function Layout() {

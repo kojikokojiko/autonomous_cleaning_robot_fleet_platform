@@ -1,7 +1,8 @@
-import os
 import json
 import logging
-from typing import Callable, Optional
+import os
+from typing import Callable
+
 import paho.mqtt.client as mqtt
 
 logger = logging.getLogger(__name__)

@@ -1,6 +1,7 @@
 import uuid
-from sqlalchemy import Column, String, Integer, BigInteger, Boolean, DateTime, Text, text
-from sqlalchemy.dialects.postgresql import UUID
+
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Integer, String, Text, text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -18,6 +19,7 @@ class FirmwareORM(Base):
     file_size_bytes  = Column(BigInteger)
     release_notes    = Column(Text)
     is_stable        = Column(Boolean, default=False)
+    config           = Column(JSONB)
     uploaded_by      = Column(String(128))
     uploaded_at      = Column(DateTime(timezone=True), server_default=text("NOW()"))
 

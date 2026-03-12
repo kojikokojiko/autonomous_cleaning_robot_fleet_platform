@@ -14,7 +14,7 @@ export function MissionsPage() {
 
   useEffect(() => {
     loadMissions();
-    const interval = setInterval(loadMissions, 10000);
+    const interval = setInterval(loadMissions, 3000);
     return () => clearInterval(interval);
   }, []);
 
@@ -56,11 +56,18 @@ export function MissionsPage() {
   );
 }
 
+const ZONE_OPTIONS = [
+  { value: "zone_a",   label: "Zone A" },
+  { value: "zone_b",   label: "Zone B" },
+  { value: "zone_c",   label: "Zone C" },
+  { value: "lobby",    label: "Lobby" },
+  { value: "corridor", label: "Corridor" },
+];
+
 function CreateMissionModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [form, setForm] = useState({
     name: "",
-    facility: "",
-    zone: "",
+    zone: "zone_a",
     priority: 5,
     scheduled_at: new Date(Date.now() + 3600_000).toISOString().slice(0, 16),
   });
@@ -70,7 +77,11 @@ function CreateMissionModal({ onClose, onCreated }: { onClose: () => void; onCre
     e.preventDefault();
     setLoading(true);
     try {
-      await createMission({ ...form, scheduled_at: new Date(form.scheduled_at).toISOString() });
+      await createMission({
+        ...form,
+        facility: "office_building_a",
+        scheduled_at: new Date(form.scheduled_at).toISOString(),
+      });
       onCreated();
     } catch (err) {
       console.error("Failed to create mission:", err);
@@ -92,42 +103,34 @@ function CreateMissionModal({ onClose, onCreated }: { onClose: () => void; onCre
               className={inputClass}
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="Clean Zone A"
+              placeholder="Zone A Cleaning"
               required
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Facility</label>
-              <input
-                className={inputClass}
-                value={form.facility}
-                onChange={(e) => setForm({ ...form, facility: e.target.value })}
-                placeholder="office_building_a"
-                required
-              />
-            </div>
-            <div>
               <label className="text-xs text-gray-400 mb-1 block">Zone</label>
-              <input
+              <select
                 className={inputClass}
                 value={form.zone}
                 onChange={(e) => setForm({ ...form, zone: e.target.value })}
-                placeholder="zone_a"
-                required
+              >
+                {ZONE_OPTIONS.map(z => (
+                  <option key={z.value} value={z.value}>{z.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Priority (1=High)</label>
+              <input
+                className={inputClass}
+                type="number"
+                min={1}
+                max={10}
+                value={form.priority}
+                onChange={(e) => setForm({ ...form, priority: +e.target.value })}
               />
             </div>
-          </div>
-          <div>
-            <label className="text-xs text-gray-400 mb-1 block">Priority (1=High, 10=Low)</label>
-            <input
-              className={inputClass}
-              type="number"
-              min={1}
-              max={10}
-              value={form.priority}
-              onChange={(e) => setForm({ ...form, priority: +e.target.value })}
-            />
           </div>
           <div>
             <label className="text-xs text-gray-400 mb-1 block">Scheduled At</label>

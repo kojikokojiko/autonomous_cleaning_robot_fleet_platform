@@ -1,7 +1,7 @@
+from datetime import datetime, timezone
 import json
 import logging
 import os
-from datetime import datetime, timezone
 from typing import Optional
 
 import redis.asyncio as aioredis
@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import TwinSnapshotORM
-from src.models.twin import TwinState, TwinSnapshot
+from src.dto.twin import TwinSnapshot, TwinState
 
 logger = logging.getLogger(__name__)
 

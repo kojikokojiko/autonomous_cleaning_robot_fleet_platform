@@ -7,6 +7,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  Legend,
 } from "recharts";
 import type { TelemetryPoint } from "../../types";
 import { format } from "date-fns";
@@ -21,8 +22,9 @@ export function BatteryChart({ data }: Props) {
     .reverse()
     .map((d) => ({
       time: format(new Date(d.time), "HH:mm:ss"),
-      battery: d.battery_level ? Math.round(d.battery_level) : null,
-      speed: d.speed ? +(d.speed * 100).toFixed(0) : null,
+      battery: d.battery_level != null ? Math.round(d.battery_level) : null,
+      // speed is in m/cycle (e.g. 0.8). Displayed on right axis as-is.
+      speed: d.speed != null ? +d.speed.toFixed(2) : null,
     }));
 
   return (
@@ -42,12 +44,25 @@ export function BatteryChart({ data }: Props) {
             domain={[0, 100]}
             tick={{ fontSize: 10, fill: "#9ca3af" }}
             tickLine={false}
+            label={{ value: "%", position: "insideTopLeft", fontSize: 10, fill: "#6b7280" }}
+          />
+          <YAxis
+            yAxisId="speed"
+            orientation="right"
+            domain={[0, 3]}
+            tick={{ fontSize: 10, fill: "#9ca3af" }}
+            tickLine={false}
+            label={{ value: "m/c", position: "insideTopRight", fontSize: 10, fill: "#6b7280" }}
           />
           <Tooltip
             contentStyle={{ background: "#1f2937", border: "1px solid #374151", borderRadius: 6 }}
             labelStyle={{ color: "#e5e7eb" }}
             itemStyle={{ color: "#d1d5db" }}
+            formatter={(value, name) =>
+              name === "Speed" ? [`${value} m/cycle`, name] : [`${value}%`, name]
+            }
           />
+          <Legend wrapperStyle={{ fontSize: 11, color: "#9ca3af" }} />
           <ReferenceLine yAxisId="battery" y={20} stroke="#ef4444" strokeDasharray="4 4" />
           <Line
             yAxisId="battery"
@@ -56,7 +71,16 @@ export function BatteryChart({ data }: Props) {
             stroke="#22c55e"
             strokeWidth={2}
             dot={false}
-            name="Battery %"
+            name="Battery"
+          />
+          <Line
+            yAxisId="speed"
+            type="monotone"
+            dataKey="speed"
+            stroke="#60a5fa"
+            strokeWidth={2}
+            dot={false}
+            name="Speed"
           />
         </LineChart>
       </ResponsiveContainer>

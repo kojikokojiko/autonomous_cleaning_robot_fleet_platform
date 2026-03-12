@@ -157,18 +157,6 @@ CREATE TABLE IF NOT EXISTS maps (
 CREATE UNIQUE INDEX idx_maps_facility_floor ON maps(facility, floor) WHERE is_active = TRUE;
 
 -- ============================================================
--- Digital Twin Snapshots (audit log)
--- ============================================================
-CREATE TABLE IF NOT EXISTS twin_snapshots (
-    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    robot_id        VARCHAR(64) NOT NULL,
-    state           JSONB NOT NULL,
-    snapshotted_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_twin_snapshots_robot_id ON twin_snapshots(robot_id, snapshotted_at DESC);
-
--- ============================================================
 -- Command History Table
 -- ============================================================
 CREATE TABLE IF NOT EXISTS commands (

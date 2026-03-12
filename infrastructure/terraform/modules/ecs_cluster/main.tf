@@ -50,7 +50,7 @@ resource "aws_lb" "main" {
 resource "aws_lb_target_group" "services" {
   for_each = var.services
 
-  name        = "${local.name}-${each.key}"
+  name        = substr("${local.name}-${each.key}", 0, 32)
   port        = 8000
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
@@ -122,6 +122,7 @@ resource "aws_ecs_task_definition" "services" {
       protocol      = "tcp"
     }]
     environment = [for k, v in each.value.environment : { name = k, value = v }]
+    secrets     = [for k, v in each.value.secrets : { name = k, valueFrom = v }]
     logConfiguration = {
       logDriver = "awslogs"
       options = {

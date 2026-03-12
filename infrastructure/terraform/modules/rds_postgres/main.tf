@@ -35,10 +35,22 @@ resource "aws_secretsmanager_secret_version" "db_password" {
   })
 }
 
+# Full DATABASE_URL — injected into ECS containers via secrets block (never plaintext)
+resource "aws_secretsmanager_secret" "database_url" {
+  name                    = "${local.name}/${var.db_name}/database-url"
+  recovery_window_in_days = var.env == "prod" ? 30 : 0
+  tags                    = local.tags
+}
+
+resource "aws_secretsmanager_secret_version" "database_url" {
+  secret_id     = aws_secretsmanager_secret.database_url.id
+  secret_string = "postgresql://${var.db_username}:${random_password.db_password.result}@${aws_db_instance.main.address}/${var.db_name}"
+}
+
 resource "aws_db_instance" "main" {
   identifier              = "${local.name}-${var.db_name}"
   engine                  = "postgres"
-  engine_version          = "15.4"
+  engine_version          = "15"
   instance_class          = var.instance_class
   allocated_storage       = var.allocated_storage
   max_allocated_storage   = var.allocated_storage * 4

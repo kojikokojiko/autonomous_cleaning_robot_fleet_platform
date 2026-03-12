@@ -26,14 +26,15 @@ export const useFleetStore = create<FleetState>((set) => ({
     }),
 
   updateRobot: (robotId, patch) =>
-    set((state) => ({
-      robots: {
-        ...state.robots,
-        [robotId]: state.robots[robotId]
-          ? { ...state.robots[robotId], ...patch }
-          : state.robots[robotId],
-      },
-    })),
+    set((state) => {
+      if (!state.robots[robotId]) return state;
+      return {
+        robots: {
+          ...state.robots,
+          [robotId]: { ...state.robots[robotId], ...patch },
+        },
+      };
+    }),
 
   setSummary: (summary) => set({ summary }),
 

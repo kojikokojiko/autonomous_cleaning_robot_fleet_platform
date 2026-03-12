@@ -19,18 +19,6 @@ resource "aws_apigatewayv2_api" "http" {
   tags = local.tags
 }
 
-resource "aws_apigatewayv2_authorizer" "cognito" {
-  api_id           = aws_apigatewayv2_api.http.id
-  authorizer_type  = "JWT"
-  name             = "cognito-authorizer"
-  identity_sources = ["$request.header.Authorization"]
-
-  jwt_configuration {
-    audience = [var.cognito_client_id]
-    issuer   = "https://cognito-idp.${var.region}.amazonaws.com/${var.cognito_user_pool_id}"
-  }
-}
-
 resource "aws_apigatewayv2_integration" "alb" {
   api_id             = aws_apigatewayv2_api.http.id
   integration_type   = "HTTP_PROXY"
@@ -51,8 +39,7 @@ resource "aws_apigatewayv2_route" "api" {
   api_id             = aws_apigatewayv2_api.http.id
   route_key          = "ANY /api/{proxy+}"
   target             = "integrations/${aws_apigatewayv2_integration.alb.id}"
-  authorization_type = "JWT"
-  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  authorization_type = "NONE"
 }
 
 resource "aws_apigatewayv2_stage" "main" {

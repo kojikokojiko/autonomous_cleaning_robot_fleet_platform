@@ -1,5 +1,6 @@
 import uuid
-from sqlalchemy import Column, String, Float, Integer, DateTime, Boolean, text
+
+from sqlalchemy import Column, DateTime, Float, Integer, String, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase
 
@@ -17,7 +18,7 @@ class MissionORM(Base):
     zone           = Column(String(64), nullable=False)
     priority       = Column(Integer, nullable=False, default=5)
     status         = Column(String(32), nullable=False, default="pending")
-    assigned_robot = Column(UUID(as_uuid=True))
+    assigned_robot = Column(String(64))  # robot_id string e.g. "robot_003"
     scheduled_at   = Column(DateTime(timezone=True), nullable=False)
     started_at     = Column(DateTime(timezone=True))
     completed_at   = Column(DateTime(timezone=True))

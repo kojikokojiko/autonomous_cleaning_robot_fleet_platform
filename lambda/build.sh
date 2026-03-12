@@ -3,7 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FUNCTIONS=("telemetry-processor" "ws-connection-manager" "ws-event-pusher")
+FUNCTIONS=("telemetry-processor" "ws-connection-manager" "ws-event-pusher" "iot-event-bridge")
 
 for fn in "${FUNCTIONS[@]}"; do
   echo "Building $fn..."

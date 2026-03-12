@@ -1,11 +1,12 @@
-import logging
 from contextlib import asynccontextmanager
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.missions import router as missions_router
-from src.db.session import engine
 from src.db.models import Base
+from src.db.session import engine
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

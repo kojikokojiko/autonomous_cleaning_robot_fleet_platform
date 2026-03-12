@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.session import get_db
-from src.models.twin import TwinState, TwinSnapshot
+from src.dto.twin import TwinSnapshot, TwinState
 from src.services.twin_service import TwinService, get_redis_client
 
 router = APIRouter(prefix="/api/v1/twins", tags=["twins"])

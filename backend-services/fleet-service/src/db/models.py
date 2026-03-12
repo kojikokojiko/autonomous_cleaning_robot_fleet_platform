@@ -1,6 +1,7 @@
-import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Float, Integer, DateTime, text
+import uuid
+
+from sqlalchemy import Column, DateTime, Float, Integer, String, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase
 
@@ -25,4 +26,6 @@ class RobotORM(Base):
     position_floor  = Column(Integer, default=1)
     last_seen       = Column(DateTime(timezone=True))
     registered_at   = Column(DateTime(timezone=True), server_default=text("NOW()"))
-    updated_at      = Column(DateTime(timezone=True), server_default=text("NOW()"), onupdate=datetime.utcnow)
+    updated_at      = Column(
+        DateTime(timezone=True), server_default=text("NOW()"), onupdate=datetime.utcnow
+    )

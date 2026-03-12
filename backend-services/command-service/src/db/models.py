@@ -1,6 +1,7 @@
 import uuid
-from sqlalchemy import Column, String, Integer, DateTime, Text, text
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+
+from sqlalchemy import Column, DateTime, Integer, String, text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase
 
 

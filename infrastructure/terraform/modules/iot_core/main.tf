@@ -7,6 +7,10 @@ locals {
   }
 }
 
+data "aws_iot_endpoint" "current" {
+  endpoint_type = "iot:Data-ATS"
+}
+
 # ============================================================
 # IoT Policy - Robot Permissions
 # ============================================================
@@ -78,17 +82,16 @@ resource "aws_iot_topic_rule" "telemetry_to_kinesis" {
   }
 }
 
-# Events → EventBridge
-resource "aws_iot_topic_rule" "events_to_eventbridge" {
-  name        = "${replace(local.name, "-", "_")}_events_to_eventbridge"
-  description = "Route robot events to EventBridge"
+# Events → Lambda ws-event-pusher (direct invocation)
+resource "aws_iot_topic_rule" "events_to_lambda" {
+  name        = "${replace(local.name, "-", "_")}_events_to_lambda"
+  description = "Route robot events to ws-event-pusher Lambda"
   enabled     = true
   sql         = "SELECT *, topic(2) as robot_id FROM 'robot/+/events'"
   sql_version = "2016-03-23"
 
-  cloudwatch_logs {
-    log_group_name = "/robotops/${var.env}/iot/events"
-    role_arn       = var.iot_rule_role_arn
+  lambda {
+    function_arn = var.iot_eventbridge_router_lambda_arn
   }
 
   error_action {
@@ -97,6 +100,14 @@ resource "aws_iot_topic_rule" "events_to_eventbridge" {
       role_arn       = var.iot_rule_role_arn
     }
   }
+}
+
+resource "aws_lambda_permission" "iot_invoke_eventbridge_router" {
+  statement_id  = "AllowIoTCoreInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = var.iot_eventbridge_router_lambda_arn
+  principal     = "iot.amazonaws.com"
+  source_arn    = aws_iot_topic_rule.events_to_lambda.arn
 }
 
 # CloudWatch log group for IoT errors

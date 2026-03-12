@@ -33,8 +33,9 @@ export function MissionTable({ missions, onAssign }: Props) {
             <tr className="text-xs text-gray-500 border-b border-gray-700">
               <th className="text-left py-2 px-4">Name</th>
               <th className="text-left py-2 px-4">Zone</th>
-              <th className="text-left py-2 px-4">Priority</th>
+              <th className="text-left py-2 px-4">Pri</th>
               <th className="text-left py-2 px-4">Status</th>
+              <th className="text-left py-2 px-4">Assigned Robot</th>
               <th className="text-left py-2 px-4">Coverage</th>
               <th className="text-left py-2 px-4">Scheduled</th>
               <th className="py-2 px-4"></th>
@@ -52,6 +53,9 @@ export function MissionTable({ missions, onAssign }: Props) {
                   <span className={clsx("text-xs px-2 py-0.5 rounded-full", STATUS_STYLES[mission.status])}>
                     {mission.status.replace("_", " ")}
                   </span>
+                </td>
+                <td className="py-2 px-4 text-xs text-gray-400 font-mono">
+                  {mission.assigned_robot ?? <span className="text-gray-600">—</span>}
                 </td>
                 <td className="py-2 px-4">
                   <div className="flex items-center gap-2">
@@ -71,9 +75,9 @@ export function MissionTable({ missions, onAssign }: Props) {
                   {mission.status === "pending" && onAssign && (
                     <button
                       onClick={() => onAssign(mission.id)}
-                      className="text-xs px-3 py-1 bg-blue-700 hover:bg-blue-600 rounded transition-colors"
+                      className="text-xs px-3 py-1 bg-green-700 hover:bg-green-600 rounded transition-colors whitespace-nowrap"
                     >
-                      Assign
+                      ▶ Assign &amp; Start
                     </button>
                   )}
                 </td>

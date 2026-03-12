@@ -39,8 +39,8 @@ jobs:
 
       - name: Build
         env:
-          VITE_API_URL: https://api.robotops.example.com
-          VITE_WS_URL: wss://api.robotops.example.com/ws
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_WS_URL: ${{ vars.VITE_WS_URL }}
         run: npm run build
         working-directory: dashboard
 

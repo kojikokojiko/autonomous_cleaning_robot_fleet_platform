@@ -153,6 +153,16 @@ resource "aws_iam_role_policy" "lambda_policy" {
         Effect   = "Allow"
         Action   = ["elasticache:*"]
         Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["secretsmanager:GetSecretValue"]
+        Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["events:PutEvents"]
+        Resource = "*"
       }
     ]
   })

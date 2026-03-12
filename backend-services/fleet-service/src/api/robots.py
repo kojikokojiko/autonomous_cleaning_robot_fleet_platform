@@ -1,9 +1,10 @@
 from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.session import get_db
-from src.models.robot import RobotCreate, RobotUpdate, RobotResponse, FleetSummary
+from src.dto.robot import FleetSummary, RobotCreate, RobotResponse, RobotUpdate
 from src.services.fleet_service import FleetService
 
 router = APIRouter(prefix="/api/v1/robots", tags=["robots"])

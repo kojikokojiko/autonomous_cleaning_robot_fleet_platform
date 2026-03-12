@@ -1,3 +1,4 @@
-output "endpoint"           { value = aws_db_instance.main.address }
-output "secret_arn"         { value = aws_secretsmanager_secret.db_password.arn }
-output "db_name"            { value = var.db_name }
+output "endpoint"                { value = aws_db_instance.main.address }
+output "secret_arn"             { value = aws_secretsmanager_secret.db_password.arn }
+output "database_url_secret_arn" { value = aws_secretsmanager_secret.database_url.arn }
+output "db_name"                { value = var.db_name }

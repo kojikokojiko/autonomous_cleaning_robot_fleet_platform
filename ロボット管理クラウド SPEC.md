@@ -33,7 +33,6 @@ Core capabilities:
 -   Map Visualization
 -   OTA Update
 -   Event Driven Monitoring
--   Digital Twin Representation
 -   Multi-Robot Task Allocation
 -   Fleet Observability
 -   Robot Fleet Deployment
@@ -70,15 +69,15 @@ Robots (ROS2)
     v
 AWS IoT Core
     |
-    +------------------+------------------+
-    |                  |                  |
-    v                  v                  v
-EventBridge       Kinesis Stream     IoT Shadow
-(Event Bus)       (Telemetry)        (Digital Twin)
-    |                  |                  |
-    v                  v                  v
-Subscriber        Lambda             Digital Twin
-Services          Processing         Service
+    +------------------+
+    |                  |
+    v                  v
+EventBridge       Kinesis Stream
+(Event Bus)       (Telemetry)
+    |                  |
+    v                  v
+Subscriber        Lambda
+Services          Processing
     |                  |
     v                  v
 Alert / Analytics  Time-Series DB
@@ -281,35 +280,7 @@ Future algorithms:
 
 ------------------------------------------------------------------------
 
-# 11. Digital Twin System
-
-Each robot has a cloud-side digital twin.
-
-Implementation: AWS IoT Device Shadow + Digital Twin Service (ECS)
-
-Example state:
-
-```json
-{
-  "robot_id": "robot_001",
-  "position": {"x": 3.2, "y": 4.1},
-  "battery": 82,
-  "status": "cleaning",
-  "mission": "clean_zone_A",
-  "last_updated": "2026-03-09T14:23:00Z"
-}
-```
-
-Digital twin uses:
-
--   monitoring
--   analytics
--   debugging
--   simulation
-
-------------------------------------------------------------------------
-
-# 12. Map System
+# 11. Map System
 
 Map format:
 
@@ -378,9 +349,9 @@ Cache:
 Amazon ElastiCache (Redis)
 
 Uses:
--   digital twin state cache
 -   session data
 -   command deduplication
+-   WebSocket pub/sub
 
 ------------------------------------------------------------------------
 
@@ -575,7 +546,6 @@ Services:
 -   fleet-service: robot registry, status management
 -   mission-service: mission CRUD, scheduling, task allocation
 -   telemetry-service: telemetry query API
--   digital-twin-service: shadow sync, state management
 -   ota-service: firmware management, update job coordination
 -   command-service: command dispatch, ACK tracking, WebSocket push
 
@@ -686,7 +656,7 @@ This project demonstrates expertise in:
 
 -   robotics systems (ROS2, SLAM, Nav2)
 -   cloud architecture (AWS, event-driven, microservices)
--   IoT platforms (MQTT, AWS IoT Core, Digital Twin)
+-   IoT platforms (MQTT, AWS IoT Core)
 -   distributed systems (ECS, async messaging)
 -   real-time data pipelines (Kinesis, TimescaleDB)
 -   infrastructure as code (Terraform, modular design)

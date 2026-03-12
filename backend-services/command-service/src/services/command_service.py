@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import CommandORM
-from src.models.command import CommandCreate, CommandResponse
+from src.dto.command import CommandCreate, CommandResponse
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ ALLOWED_COMMANDS = {"start_mission", "pause_mission", "return_to_dock", "emergen
 
 
 def _mqtt_publish(topic: str, payload: dict, qos: int = 1) -> None:
-    client = mqtt.Client()
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
     client.connect(MQTT_BROKER, MQTT_PORT, keepalive=10)
     client.publish(topic, json.dumps(payload), qos=qos)
     client.disconnect()

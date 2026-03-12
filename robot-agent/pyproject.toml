@@ -1,0 +1,15 @@
+[project]
+name = "robotops-robot-agent"
+version = "0.1.0"
+description = "RobotOps robot agent and fleet simulator"
+requires-python = ">=3.11"
+dependencies = [
+    "paho-mqtt>=2.0.0",
+    "pydantic>=2.7.1",
+    "pydantic-settings>=2.2.1",
+    "structlog>=24.1.0",
+    "numpy>=1.26.4",
+]
+
+[tool.uv]
+dev-dependencies = []

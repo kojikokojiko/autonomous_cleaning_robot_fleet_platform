@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.session import get_db
-from src.models.telemetry import TelemetryPoint
+from src.dto.telemetry import TelemetryPoint
 from src.services.telemetry_service import TelemetryService
 
 router = APIRouter(prefix="/api/v1/telemetry", tags=["telemetry"])

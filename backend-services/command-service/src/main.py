@@ -1,11 +1,16 @@
-import logging
+import asyncio
 from contextlib import asynccontextmanager
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.commands import router as commands_router, ws_router
-from src.db.session import engine
+from src.api.commands import router as commands_router
+from src.api.commands import ws_router
 from src.db.models import Base
+from src.db.session import engine
+from src.services.redis_subscriber import subscribe_and_forward
+from src.services.websocket_manager import manager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -16,7 +21,9 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Command service started")
+    task = asyncio.create_task(subscribe_and_forward(manager))
     yield
+    task.cancel()
     await engine.dispose()
     logger.info("Command service stopped")
 

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSock
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.session import get_db
-from src.models.command import CommandCreate, CommandResponse
+from src.dto.command import CommandCreate, CommandResponse
 from src.services.command_service import CommandService
 from src.services.websocket_manager import manager
 

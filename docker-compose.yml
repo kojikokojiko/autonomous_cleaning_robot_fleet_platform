@@ -68,6 +68,7 @@ services:
       DATABASE_URL: postgresql://robotops:robotops_dev@postgres:5432/robotops
       REDIS_URL: redis://redis:6379
       FLEET_SERVICE_URL: http://fleet-service:8000
+      COMMAND_SERVICE_URL: http://command-service:8000
       ENV: development
     ports:
       - "8002:8000"
@@ -95,27 +96,6 @@ services:
         condition: service_healthy
     volumes:
       - ./backend-services/telemetry-service:/app
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
-
-  digital-twin-service:
-    build:
-      context: ./backend-services/digital-twin-service
-      dockerfile: Dockerfile
-    environment:
-      DATABASE_URL: postgresql://robotops:robotops_dev@postgres:5432/robotops
-      REDIS_URL: redis://redis:6379
-      MQTT_BROKER: mqtt-broker
-      MQTT_PORT: "1883"
-      ENV: development
-    ports:
-      - "8004:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ./backend-services/digital-twin-service:/app
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 
   command-service:
@@ -171,7 +151,6 @@ services:
       - fleet-service
       - mission-service
       - telemetry-service
-      - digital-twin-service
       - command-service
       - ota-service
 

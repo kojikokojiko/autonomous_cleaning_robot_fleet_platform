@@ -19,7 +19,9 @@ resource "aws_wafv2_web_acl" "api" {
   rule {
     name     = "AWSManagedRulesCommonRuleSet"
     priority = 1
-    override_action { none {} }
+    override_action {
+      none {}
+    }
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesCommonRuleSet"
@@ -37,7 +39,9 @@ resource "aws_wafv2_web_acl" "api" {
   rule {
     name     = "RateLimitRule"
     priority = 2
-    action { block {} }
+    action {
+      block {}
+    }
     statement {
       rate_based_statement {
         limit              = 1000
@@ -60,7 +64,7 @@ resource "aws_wafv2_web_acl" "api" {
   tags = local.tags
 }
 
-resource "aws_wafv2_web_acl_association" "api_gateway" {
-  resource_arn = var.api_gateway_arn
+resource "aws_wafv2_web_acl_association" "alb" {
+  resource_arn = var.alb_arn
   web_acl_arn  = aws_wafv2_web_acl.api.arn
 }

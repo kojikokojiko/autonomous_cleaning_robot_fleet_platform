@@ -1,4 +1,4 @@
-import type { Robot, FleetSummary, Mission, MissionStatus, TelemetryPoint } from "../types";
+import type { Robot, FleetSummary, Mission, MissionStatus, TelemetryPoint, Firmware, OTAJob } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
@@ -12,6 +12,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 // ---- Fleet Service ----
+export const registerRobot = (data: { robot_id: string; name: string; model?: string }) =>
+  request<Robot>("/api/v1/robots", { method: "POST", body: JSON.stringify({ ...data, facility: "office_building_a" }) });
+
 export const fetchRobots = (params?: { facility?: string; status?: string }) => {
   const qs = new URLSearchParams(params as Record<string, string>).toString();
   return request<Robot[]>(`/api/v1/robots${qs ? `?${qs}` : ""}`);
@@ -48,6 +51,25 @@ export const sendCommand = (robotId: string, commandType: string, payload?: Reco
     method: "POST",
     body: JSON.stringify({ robot_id: robotId, command_type: commandType, payload }),
   });
+
+// ---- OTA Service ----
+export const fetchFirmware = () =>
+  request<Firmware[]>("/api/v1/ota/firmware");
+
+export const createFirmware = (data: {
+  version: string; s3_key: string; checksum_sha256: string;
+  file_size_bytes?: number; release_notes?: string; is_stable?: boolean;
+  config?: Record<string, unknown>;
+}) => request<Firmware>("/api/v1/ota/firmware", { method: "POST", body: JSON.stringify(data) });
+
+export const fetchOTAJobs = (robotId?: string) => {
+  const qs = robotId ? `?robot_id=${robotId}` : "";
+  return request<OTAJob[]>(`/api/v1/ota/jobs${qs}`);
+};
+
+export const createOTAJobs = (data: {
+  firmware_id: string; robot_ids: string[]; strategy: "rolling" | "canary";
+}) => request<OTAJob[]>("/api/v1/ota/jobs", { method: "POST", body: JSON.stringify(data) });
 
 // ---- Telemetry Service ----
 export const fetchTelemetry = (robotId: string, params?: { from_ts?: string; to_ts?: string; limit?: number }) => {

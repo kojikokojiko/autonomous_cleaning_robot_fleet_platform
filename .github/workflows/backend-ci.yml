@@ -26,7 +26,6 @@ jobs:
           - fleet-service
           - mission-service
           - telemetry-service
-          - digital-twin-service
           - command-service
           - ota-service
 
@@ -83,9 +82,9 @@ jobs:
           - fleet-service
           - mission-service
           - telemetry-service
-          - digital-twin-service
           - command-service
           - ota-service
+          - digital-twin-service
 
     permissions:
       id-token: write
@@ -135,7 +134,7 @@ jobs:
 
       - name: Force new ECS deployment (rolling)
         run: |
-          SERVICES=(fleet-service mission-service telemetry-service digital-twin-service command-service ota-service)
+          SERVICES=(fleet-service mission-service telemetry-service command-service ota-service digital-twin-service)
           for svc in "${SERVICES[@]}"; do
             aws ecs update-service \
               --cluster robotops-dev-cluster \
@@ -147,7 +146,7 @@ jobs:
 
       - name: Wait for services to stabilize
         run: |
-          SERVICES=(fleet-service mission-service telemetry-service digital-twin-service command-service ota-service)
+          SERVICES=(fleet-service mission-service telemetry-service command-service ota-service digital-twin-service)
           for svc in "${SERVICES[@]}"; do
             aws ecs wait services-stable \
               --cluster robotops-dev-cluster \

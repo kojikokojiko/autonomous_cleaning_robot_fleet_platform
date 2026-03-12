@@ -1,14 +1,20 @@
-import json
-import logging
 from datetime import datetime, timezone
+import logging
 from typing import Optional
-from uuid import UUID
 
-from sqlalchemy import select, func, update
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import RobotORM
-from src.models.robot import RobotCreate, RobotUpdate, RobotResponse, FleetSummary, RobotStatus, Position
+from src.dto.robot import (
+    FleetSummary,
+    Position,
+    RobotCreate,
+    RobotResponse,
+    RobotStatus,
+    RobotUpdate,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -79,10 +85,6 @@ class FleetService:
         await self.db.commit()
         await self.db.refresh(robot)
 
-        # Update digital twin cache
-        if self.redis:
-            await self._update_twin_cache(robot)
-
         return self._to_response(robot)
 
     async def update_telemetry(
@@ -91,19 +93,32 @@ class FleetService:
         battery_level: float,
         position: dict,
         status: str,
+        firmware_version: Optional[str] = None,
     ) -> None:
-        """Fast path: update robot's live state from telemetry."""
+        """Upsert robot's live state from telemetry. Auto-registers unknown robots."""
+        now = datetime.now(timezone.utc)
+        telemetry_values = dict(
+            battery_level=battery_level,
+            position_x=position.get("x"),
+            position_y=position.get("y"),
+            position_floor=position.get("floor", 1),
+            status=status,
+            last_seen=now,
+            updated_at=now,
+        )
+        if firmware_version is not None:
+            telemetry_values["firmware_version"] = firmware_version
         await self.db.execute(
-            update(RobotORM)
-            .where(RobotORM.robot_id == robot_id)
+            pg_insert(RobotORM)
             .values(
-                battery_level=battery_level,
-                position_x=position.get("x"),
-                position_y=position.get("y"),
-                position_floor=position.get("floor", 1),
-                status=status,
-                last_seen=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                robot_id=robot_id,
+                name=robot_id,  # auto-registered robots use robot_id as name
+                facility="office_building_a",
+                **telemetry_values,
+            )
+            .on_conflict_do_update(
+                index_elements=["robot_id"],
+                set_=telemetry_values,
             )
         )
         await self.db.commit()
@@ -135,25 +150,6 @@ class FleetService:
             charging=status_counts[RobotStatus.CHARGING] + status_counts[RobotStatus.DOCKED],
             error=status_counts[RobotStatus.ERROR],
             avg_battery=sum(batteries) / len(batteries) if batteries else None,
-        )
-
-    async def _update_twin_cache(self, robot: RobotORM) -> None:
-        twin = {
-            "robot_id": robot.robot_id,
-            "name": robot.name,
-            "status": robot.status,
-            "battery": robot.battery_level,
-            "position": {
-                "x": robot.position_x,
-                "y": robot.position_y,
-                "floor": robot.position_floor,
-            },
-            "last_updated": datetime.now(timezone.utc).isoformat(),
-        }
-        await self.redis.setex(
-            f"twin:{robot.robot_id}",
-            300,  # 5 min TTL
-            json.dumps(twin),
         )
 
     @staticmethod

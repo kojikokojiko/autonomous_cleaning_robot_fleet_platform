@@ -1,0 +1,44 @@
+[tool.ruff]
+# Python バージョン / Python version
+target-version = "py311"
+# 最長行 100 文字 (99 が最長行のため全 E501 を解消) / 100 chars eliminates all E501 violations
+line-length = 100
+
+# チェック対象ディレクトリ / Directories to check
+src = ["backend-services", "robot-agent", "lambda"]
+
+# 除外ディレクトリ / Excluded directories
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "node_modules",
+    "*.egg-info",
+    "dist",
+    "build",
+]
+
+[tool.ruff.lint]
+# 有効化するルール / Enabled rules
+# E: pycodestyle errors  W: pycodestyle warnings
+# F: pyflakes            I: isort (import sorting)
+select = ["E", "F", "W", "I"]
+
+# 無視するルール / Ignored rules
+ignore = [
+    "E741",  # ambiguous variable name (e.g. 'l') — sometimes unavoidable in math/physics
+]
+
+# ファイルごとの例外 / Per-file exceptions
+[tool.ruff.lint.per-file-ignores]
+# テストファイルは未使用インポートを許容 (フィクスチャの再エクスポートなど)
+# Test files allow unused imports (fixture re-exports etc.)
+"**/tests/**/*.py" = ["F401"]
+# Lambda handler は関数レベルの import を使うことがある
+# Lambda handlers may use function-level imports
+"lambda/**/*.py" = ["E402"]
+
+[tool.ruff.lint.isort]
+# 相対インポートより絶対インポートを優先 / Prefer absolute imports
+force-sort-within-sections = true
+known-first-party = ["src"]

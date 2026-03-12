@@ -1,10 +1,11 @@
 from typing import Optional
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.session import get_db
-from src.models.mission import MissionCreate, MissionUpdate, MissionResponse
+from src.dto.mission import MissionCreate, MissionResponse, MissionUpdate
 from src.services.mission_service import MissionService
 
 router = APIRouter(prefix="/api/v1/missions", tags=["missions"])

@@ -1,6 +1,6 @@
+from datetime import datetime, timezone
 import logging
 import os
-from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -9,11 +9,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import MissionORM
-from src.models.mission import MissionCreate, MissionUpdate, MissionResponse, MissionStatus, RobotCandidate
+from src.dto.mission import (
+    MissionCreate,
+    MissionResponse,
+    MissionStatus,
+    MissionUpdate,
+    RobotCandidate,
+)
 from src.services.allocator import allocate
 
 logger = logging.getLogger(__name__)
-FLEET_SERVICE_URL = os.getenv("FLEET_SERVICE_URL", "http://fleet-service:8000")
+FLEET_SERVICE_URL   = os.getenv("FLEET_SERVICE_URL",   "http://fleet-service:8000")
+COMMAND_SERVICE_URL = os.getenv("COMMAND_SERVICE_URL", "http://command-service:8000")
 
 
 class MissionService:
@@ -53,12 +60,18 @@ class MissionService:
             query = query.where(MissionORM.status == status)
         if facility:
             query = query.where(MissionORM.facility == facility)
-        query = query.order_by(MissionORM.priority, MissionORM.scheduled_at).limit(limit).offset(offset)
+        query = (
+            query.order_by(MissionORM.priority, MissionORM.scheduled_at)
+            .limit(limit)
+            .offset(offset)
+        )
 
         result = await self.db.execute(query)
         return [self._to_response(m) for m in result.scalars().all()]
 
-    async def update_mission(self, mission_id: UUID, data: MissionUpdate) -> Optional[MissionResponse]:
+    async def update_mission(
+        self, mission_id: UUID, data: MissionUpdate
+    ) -> Optional[MissionResponse]:
         result = await self.db.execute(
             select(MissionORM).where(MissionORM.id == mission_id)
         )
@@ -121,11 +134,28 @@ class MissionService:
         if not robot_id:
             return None
 
-        mission.assigned_robot = None  # will store UUID when fleet returns UUID
-        mission.status = MissionStatus.ASSIGNED.value
+        mission.assigned_robot = robot_id  # store robot_id string directly
+        mission.status = MissionStatus.IN_PROGRESS.value
+        mission.started_at = datetime.now(timezone.utc)
         mission.updated_at = datetime.now(timezone.utc)
         await self.db.commit()
         await self.db.refresh(mission)
+
+        # Send start_mission command to the assigned robot
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                await client.post(
+                    f"{COMMAND_SERVICE_URL}/api/v1/commands",
+                    json={
+                        "robot_id": robot_id,
+                        "command_type": "start_mission",
+                        "payload": {"mission_id": str(mission.id), "zone": mission.zone},
+                    },
+                )
+                logger.info(f"start_mission sent to {robot_id} for mission {mission.id}")
+        except Exception as e:
+            logger.error(f"Failed to send start_mission command: {e}")
+
         return self._to_response(mission)
 
     @staticmethod

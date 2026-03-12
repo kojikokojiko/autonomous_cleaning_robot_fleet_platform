@@ -11,12 +11,13 @@ variable "ecs_task_role_arn" { type = string }
 variable "services" {
   description = "Map of ECS services to deploy"
   type = map(object({
-    image          = string
-    cpu            = number
-    memory         = number
-    desired_count  = number
-    path_pattern   = string
-    priority       = number
-    environment    = map(string)
+    image         = string
+    cpu           = number
+    memory        = number
+    desired_count = number
+    path_pattern  = string
+    priority      = number
+    environment   = map(string)
+    secrets       = optional(map(string), {})  # env_var_name → Secrets Manager ARN
   }))
 }

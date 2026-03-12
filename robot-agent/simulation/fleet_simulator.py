@@ -11,8 +11,8 @@ import logging
 import random
 import signal
 import sys
-import time
 from threading import Thread
+import time
 
 from src.nodes.robot_agent import RobotAgent
 from src.nodes.state import RobotState, RobotStatus
@@ -50,10 +50,10 @@ def create_robot(
 
 def main():
     parser = argparse.ArgumentParser(description="RobotOps Fleet Simulator")
-    parser.add_argument("--robots",   type=int,   default=5,         help="Number of robots to simulate")
+    parser.add_argument("--robots",   type=int,   default=5,    help="Number of robots to simulate")  # noqa: E501
     parser.add_argument("--broker",   type=str,   default="localhost", help="MQTT broker host")
-    parser.add_argument("--port",     type=int,   default=1883,       help="MQTT broker port")
-    parser.add_argument("--interval", type=float, default=2.0,        help="Telemetry interval (seconds)")
+    parser.add_argument("--port",     type=int,   default=1883, help="MQTT broker port")
+    parser.add_argument("--interval", type=float, default=0.5,  help="Telemetry interval (seconds)")  # noqa: E501
     args = parser.parse_args()
 
     logger.info(f"Starting fleet simulator: {args.robots} robots → {args.broker}:{args.port}")
@@ -80,12 +80,6 @@ def main():
 
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
-
-    # Auto-start cleaning for some robots after 5s
-    time.sleep(5)
-    for agent in agents[:max(1, args.robots // 2)]:
-        logger.info(f"Auto-starting mission for {agent.robot_id}")
-        agent._cmd_start_mission({"mission_id": f"sim_mission_{agent.robot_id}"})
 
     while True:
         time.sleep(1)

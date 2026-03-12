@@ -2,10 +2,11 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.session import get_db
-from src.models.ota import (
+from src.dto.ota import (
     FirmwareCreate,
     FirmwareResponse,
     OTAJobCreate,
@@ -36,6 +37,22 @@ async def list_firmware(
     return await service.list_firmware()
 
 
+@router.get("/firmware/{firmware_id}/download")
+async def download_firmware(
+    firmware_id: UUID,
+    service: OTAService = Depends(get_service),
+):
+    """Return the canonical firmware bytes. Robots download from this endpoint and verify SHA-256."""  # noqa: E501
+    content = await service.download_firmware(firmware_id)
+    if content is None:
+        raise HTTPException(status_code=404, detail=f"Firmware '{firmware_id}' not found")
+    return Response(
+        content=content,
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="firmware-{firmware_id}.json"'},
+    )
+
+
 @router.post("/jobs", response_model=list[OTAJobResponse], status_code=201)
 async def create_jobs(
     data: OTAJobCreate,
@@ -61,7 +78,7 @@ async def update_job_status(
     data: OTAJobStatusUpdate,
     service: OTAService = Depends(get_service),
 ):
-    job = await service.update_job_status(job_id, data.status)
+    job = await service.update_job_status(job_id, data.status, data.error_message)
     if job is None:
         raise HTTPException(status_code=404, detail=f"OTA job '{job_id}' not found")
     return job

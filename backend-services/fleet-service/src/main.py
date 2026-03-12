@@ -1,14 +1,19 @@
-import logging
+import asyncio
 from contextlib import asynccontextmanager
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.robots import router as robots_router
-from src.db.session import engine
 from src.db.models import Base
+from src.db.session import engine
+from src.mqtt_bridge import MQTTBridge
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+_mqtt_bridge = MQTTBridge()
 
 
 @asynccontextmanager
@@ -17,7 +22,11 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Fleet service started")
+    # Start MQTT bridge as background task
+    task = asyncio.create_task(_mqtt_bridge.start())
     yield
+    _mqtt_bridge.stop()
+    task.cancel()
     await engine.dispose()
     logger.info("Fleet service stopped")
 

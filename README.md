@@ -21,7 +21,6 @@ robotops-platform/
 │   ├── fleet-service/
 │   ├── mission-service/
 │   ├── telemetry-service/
-│   ├── digital-twin-service/
 │   ├── command-service/
 │   ├── ota-service/
 │   └── shared/
@@ -51,7 +50,7 @@ robotops-platform/
 | Database | PostgreSQL + TimescaleDB (RDS) |
 | Cache | Redis (ElastiCache) |
 | Real-time | API Gateway WebSocket API |
-| Auth | Amazon Cognito |
+| Auth | WAF (レート制限・不正リクエスト防御) |
 | Storage | Amazon S3 |
 | IaC | Terraform |
 | CI/CD | GitHub Actions |

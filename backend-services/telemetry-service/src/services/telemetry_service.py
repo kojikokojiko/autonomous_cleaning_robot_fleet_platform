@@ -1,11 +1,11 @@
-import logging
 from datetime import datetime
+import logging
 from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.telemetry import TelemetryPoint
+from src.dto.telemetry import TelemetryPoint
 
 logger = logging.getLogger(__name__)
 

@@ -41,9 +41,6 @@ resource "aws_apigatewayv2_route" "connect" {
   api_id    = aws_apigatewayv2_api.ws.id
   route_key = "$connect"
   target    = "integrations/${aws_apigatewayv2_integration.connect.id}"
-
-  authorization_type = "CUSTOM"
-  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
 resource "aws_apigatewayv2_route" "disconnect" {
@@ -56,15 +53,6 @@ resource "aws_apigatewayv2_route" "default" {
   api_id    = aws_apigatewayv2_api.ws.id
   route_key = "$default"
   target    = "integrations/${aws_apigatewayv2_integration.default.id}"
-}
-
-# Cognito Authorizer for WebSocket $connect
-resource "aws_apigatewayv2_authorizer" "cognito" {
-  api_id          = aws_apigatewayv2_api.ws.id
-  authorizer_type = "REQUEST"
-  authorizer_uri  = var.auth_lambda_arn
-  name            = "cognito-ws-authorizer"
-  identity_sources = ["route.request.querystring.token"]
 }
 
 # Stage

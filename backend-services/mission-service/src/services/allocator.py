@@ -9,11 +9,11 @@ Score formula (lower = better):
 
 Only robots with battery > 20% and status = idle are candidates.
 """
-import math
 import logging
+import math
 from typing import Optional
 
-from src.models.mission import RobotCandidate
+from src.dto.mission import RobotCandidate
 
 logger = logging.getLogger(__name__)
 

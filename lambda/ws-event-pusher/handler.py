@@ -12,8 +12,8 @@ import logging
 import os
 
 import boto3
-import redis
 from botocore.exceptions import ClientError
+import redis
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)

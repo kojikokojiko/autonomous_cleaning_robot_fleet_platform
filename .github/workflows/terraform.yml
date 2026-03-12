@@ -1,10 +1,17 @@
 name: Terraform CI/CD
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "infrastructure/terraform/**"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Terraform action to run"
+        required: true
+        default: "plan"
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
   pull_request:
     branches: [main]
     paths:
@@ -17,9 +24,9 @@ env:
 
 jobs:
   terraform:
-    name: Terraform ${{ github.event_name == 'push' && 'Apply' || 'Plan' }}
+    name: Terraform ${{ github.event_name == 'workflow_dispatch' && inputs.action || 'Plan' }}
     runs-on: ubuntu-latest
-    environment: ${{ github.event_name == 'push' && 'dev' || '' }}
+    environment: ${{ (github.event_name == 'workflow_dispatch' && inputs.action != 'plan') && 'dev' || '' }}
 
     permissions:
       id-token: write   # for OIDC auth
@@ -63,11 +70,11 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const output = `#### Terraform Plan 📋
+            const output = `#### Terraform Plan
             \`\`\`
             ${{ steps.plan.outputs.stdout }}
             \`\`\`
-            *Pushed by: @${{ github.actor }}*`;
+            *Run by: @${{ github.actor }}*`;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -75,8 +82,12 @@ jobs:
               body: output,
             });
 
-      # Apply only on push to main (after PR merge)
       - name: Terraform Apply
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_dispatch' && inputs.action == 'apply'
         run: terraform apply -auto-approve tfplan
+        working-directory: ${{ env.WORKING_DIR }}
+
+      - name: Terraform Destroy
+        if: github.event_name == 'workflow_dispatch' && inputs.action == 'destroy'
+        run: terraform destroy -auto-approve
         working-directory: ${{ env.WORKING_DIR }}

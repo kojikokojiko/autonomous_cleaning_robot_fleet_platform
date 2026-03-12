@@ -1,0 +1,17 @@
+ 1. IoT Events Rule のバグ修正 (modules/iot_core/main.tf)                             
+  - events_to_eventbridge ルールが cloudwatch_logs に書き込んでいたのを eventbridge 
+  アクションに変更
+  - ロボットのイベントが正しく EventBridge → Lambda (ws-event-pusher) →
+  ブラウザに流れるようになった
+  - variables.tf に event_bus_arn 変数を追加
+  - dev/main.tf で event_bus_arn = module.eventbridge.event_bus_arn を接続
+
+  2. ECR リポジトリの追加 (environments/dev/main.tf)
+  - 6サービス分の aws_ecr_repository リソースを for_each で追加
+    - fleet, mission, telemetry, command, ota, digital-twin
+  - aws_ecr_lifecycle_policy も追加（直近10イメージを保持）
+  - CI/CD が期待する robotops-{service-name} のリポジトリ名と一致
+
+  3. digital-twin-service の追加 (environments/dev/main.tf, backend-ci.yml)
+  - ECS の services マップに digital-twin-service を追加（/api/v1/twins*, priority=40）
+  - backend-ci.yml の test / build-push マトリクスと deploy-ecs スクリプトにも追加

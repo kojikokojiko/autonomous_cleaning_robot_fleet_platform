@@ -1,2 +1,8 @@
-variable "env" { type = string }
-variable "api_gateway_arn" { type = string }
+variable "env" {
+  type = string
+}
+
+variable "alb_arn" {
+  type        = string
+  description = "ARN of the Application Load Balancer to associate WAF with"
+}

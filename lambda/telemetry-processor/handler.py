@@ -6,22 +6,35 @@ Batch-inserts records into TimescaleDB hypertable.
 Failed records are automatically forwarded to SQS DLQ by the event source mapping.
 """
 import base64
+from datetime import datetime, timezone
 import json
 import logging
 import os
-from datetime import datetime, timezone
 
+import boto3
 import psycopg2
 import psycopg2.extras
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-DATABASE_URL = os.environ["DATABASE_URL"]
+# DATABASE_URL is fetched from Secrets Manager on first invocation and cached
+# for the lifetime of the Lambda container (warm invocations reuse it).
+# Fallback to plain env var so local tests / docker-compose still work.
+_database_url: str | None = os.environ.get("DATABASE_URL")
+
+
+def _get_database_url() -> str:
+    global _database_url
+    if _database_url is None:
+        secret_arn = os.environ["DB_SECRET_ARN"]
+        client = boto3.client("secretsmanager")
+        _database_url = client.get_secret_value(SecretId=secret_arn)["SecretString"]
+    return _database_url
 
 
 def get_connection():
-    return psycopg2.connect(DATABASE_URL)
+    return psycopg2.connect(_get_database_url())
 
 
 def lambda_handler(event, context):
@@ -72,7 +85,7 @@ def _parse_telemetry(payload: dict) -> dict | None:
         "nav_status":        payload.get("nav_status"),
         "motor_load_left":   payload.get("motor_load_left"),
         "motor_load_right":  payload.get("motor_load_right"),
-        "sensor_health":     json.dumps(payload.get("sensor_health")) if payload.get("sensor_health") else None,
+        "sensor_health":     json.dumps(sh) if (sh := payload.get("sensor_health")) else None,
         "mission_id":        payload.get("mission_id"),
         "mission_progress":  payload.get("mission_progress"),
         "speed":             payload.get("speed"),

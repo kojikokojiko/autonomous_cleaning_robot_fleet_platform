@@ -85,6 +85,31 @@ export interface RobotEvent {
   occurred_at?: string;
 }
 
+export interface Firmware {
+  id: string;
+  version: string;
+  s3_key: string;
+  checksum_sha256: string;
+  file_size_bytes?: number;
+  release_notes?: string;
+  is_stable: boolean;
+  config?: Record<string, unknown>;
+  uploaded_by?: string;
+  uploaded_at: string;
+}
+
+export interface OTAJob {
+  id: string;
+  firmware_id: string;
+  robot_id: string;
+  strategy: "rolling" | "canary";
+  status: string;
+  attempts: number;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface WebSocketMessage {
   type: "telemetry_update" | "robot_event" | "mission_update";
   event_type?: string;

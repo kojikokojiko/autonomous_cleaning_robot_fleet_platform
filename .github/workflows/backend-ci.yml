@@ -11,6 +11,7 @@ on:
     paths:
       - "backend-services/**"
       - "lambda/**"
+  workflow_dispatch:
 
 env:
   AWS_REGION: ap-northeast-1

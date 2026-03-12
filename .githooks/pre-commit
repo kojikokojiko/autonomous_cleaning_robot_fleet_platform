@@ -1,0 +1,22 @@
+#!/bin/sh
+# Pre-commit hook: run lint and type-check for staged dashboard files
+
+DASHBOARD_STAGED=$(git diff --cached --name-only | grep '^dashboard/src/')
+
+if [ -n "$DASHBOARD_STAGED" ]; then
+  echo "Running dashboard lint..."
+  cd dashboard && npm run lint
+  if [ $? -ne 0 ]; then
+    echo "Lint failed. Fix errors before committing."
+    exit 1
+  fi
+  echo "Running type check..."
+  npx tsc --noEmit
+  if [ $? -ne 0 ]; then
+    echo "Type check failed. Fix errors before committing."
+    exit 1
+  fi
+  cd ..
+fi
+
+echo "Pre-commit checks passed."

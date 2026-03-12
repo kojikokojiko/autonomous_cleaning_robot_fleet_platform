@@ -191,7 +191,7 @@ export function OTAPage() {
 function RegisterFirmwareModal({ onClose, onRegistered }: { onClose: () => void; onRegistered: () => void }) {
   const [form, setForm] = useState({
     version: "", release_notes: "", is_stable: false,
-    step_per_cycle: 0.5,
+    step_per_cycle: 0.5, s3_key: "", checksum_sha256: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -203,6 +203,8 @@ function RegisterFirmwareModal({ onClose, onRegistered }: { onClose: () => void;
     try {
       await createFirmware({
         version: form.version,
+        s3_key: form.s3_key,
+        checksum_sha256: form.checksum_sha256,
         release_notes: form.release_notes || undefined,
         is_stable: form.is_stable,
         config: { step_per_cycle: form.step_per_cycle },

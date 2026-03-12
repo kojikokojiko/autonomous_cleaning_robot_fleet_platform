@@ -176,7 +176,8 @@ function RobotMarker({
       brushRef.current.rotation.y += delta * 4;
     }
     if (ringRef.current) {
-      ringRef.current.material.opacity =
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (ringRef.current.material as any).opacity =
         0.35 + 0.35 * Math.sin(Date.now() * 0.004);
     }
     if (isError && bodyRef.current) {
@@ -185,7 +186,7 @@ function RobotMarker({
   });
 
   if (!robot.position) return null;
-  const { x, y: _y, floor: _f } = robot.position;
+  const { x } = robot.position;
   const z = robot.position.y; // position.y is map-Y mapped to Three.js Z
 
   return (
@@ -306,7 +307,6 @@ export function FleetMap({ robots }: FleetMapProps) {
       out[key] = trailStore[key];
     }
     return out;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [robots]);
 
   const robotsWithPos = robots.filter((r) => r.position);

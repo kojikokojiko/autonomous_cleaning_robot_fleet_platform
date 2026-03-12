@@ -5,5 +5,6 @@ variable "region" {
 
 variable "github_repo" {
   type        = string
-  description = "GitHub repository in owner/name format (e.g. myorg/autonomous_cleaning_robot_fleet_platform)"
+  description = "GitHub repository in owner/name format"
+  default     = "kojikokojiko/autonomous_cleaning_robot_fleet_platform"
 }

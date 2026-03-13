@@ -73,8 +73,17 @@ aws dynamodb create-table \
 `terraform apply` の前に必須。zip が存在しないと plan 時にエラーになる。
 
 ```bash
+# telemetry-processorはLinux用にDockerでビルドが必要
+cd lambda/telemetry-processor
+docker run --rm --platform linux/amd64 \
+  -v "$(pwd)":/out \
+  --entrypoint /bin/bash \
+  public.ecr.aws/lambda/python:3.11 \
+  -c "pip install -r /out/requirements.txt -t /tmp/pkg -q && cp /out/handler.py /tmp/pkg/ && cd /tmp/pkg && python3 -m zipfile -c /out/function.zip ."
+cd ../..
+
+# その他のLambdaは通常ビルド
 bash lambda/build.sh
-# → lambda/telemetry-processor/function.zip
 # → lambda/ws-connection-manager/function.zip
 # → lambda/ws-event-pusher/function.zip
 ```
@@ -123,16 +132,7 @@ git remote add origin https://github.com/<your-username>/autonomous_cleaning_rob
 
 ---
 
-### Step 6: terraform.tfvars のリポジトリ名を更新
-
-```bash
-# infrastructure/terraform/environments/dev/terraform.tfvars
-github_repo = "<your-username>/autonomous_cleaning_robot_fleet_platform"
-```
-
----
-
-### Step 7: GitHub Secrets を設定
+### Step 6: GitHub Secrets を設定
 
 ```bash
 export GITHUB_REPO=<your-username>/autonomous_cleaning_robot_fleet_platform
@@ -152,7 +152,7 @@ export GITHUB_REPO=<your-username>/autonomous_cleaning_robot_fleet_platform
 
 ---
 
-### Step 8: git push → CI/CD が全自動デプロイ
+### Step 7: git push → CI/CD が全自動デプロイ
 
 ```bash
 git add .
@@ -180,11 +180,71 @@ lambda-ci.yml
 
 ---
 
-### Step 9: 動作確認
+### Step 8: 動作確認
 
 ```bash
 terraform output dashboard_url
 # → ブラウザで開く
+```
+
+---
+
+### Step 9: IoT Core証明書のセットアップ（シミュレーター用）
+
+AWS IoT Coreへの接続に必要な証明書を発行する（1回のみ）。
+
+```bash
+# IoT Core証明書の発行（シミュレーター用、1回のみ）
+mkdir -p robot-agent/certs
+
+aws iot create-keys-and-certificate \
+  --set-as-active \
+  --region ap-northeast-1 \
+  --output json > /tmp/iot_cert.json
+
+python3 -c "
+import json
+d = json.load(open('/tmp/iot_cert.json'))
+open('robot-agent/certs/cert.pem','w').write(d['certificatePem'])
+open('robot-agent/certs/private.key','w').write(d['keyPair']['PrivateKey'])
+print('Certificate ARN:', d['certificateArn'])
+"
+
+# IoT Policyの作成とアタッチ
+CERT_ARN=$(python3 -c "import json; print(json.load(open('/tmp/iot_cert.json'))['certificateArn'])")
+
+aws iot create-policy \
+  --policy-name "robotops-dev-simulator-policy" \
+  --policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["iot:Connect","iot:Publish","iot:Subscribe","iot:Receive"],"Resource":"*"}]}' \
+  --region ap-northeast-1
+
+aws iot attach-policy \
+  --policy-name "robotops-dev-simulator-policy" \
+  --target "$CERT_ARN" \
+  --region ap-northeast-1
+
+# Amazon Root CA取得
+curl -s https://www.amazontrust.com/repository/AmazonRootCA1.pem \
+  -o robot-agent/certs/AmazonRootCA1.pem
+
+echo "証明書セットアップ完了"
+```
+
+シミュレーター起動：
+
+```bash
+# IoT Coreエンドポイント確認
+IOT_ENDPOINT=$(aws iot describe-endpoint --endpoint-type iot:Data-ATS --region ap-northeast-1 --query endpointAddress --output text)
+
+# シミュレーター起動
+cd robot-agent
+python -m simulation.fleet_simulator \
+  --robots 5 \
+  --broker $IOT_ENDPOINT \
+  --port 8883 \
+  --cert certs/cert.pem \
+  --key certs/private.key \
+  --ca certs/AmazonRootCA1.pem
 ```
 
 ---
@@ -233,8 +293,6 @@ cd infrastructure/terraform/environments/dev
 terraform destroy
 ```
 
-> **注意**: terraform destroy ではS3バケット（ファームウェア・ダッシュボード）は削除されない場合がある。AWS Consoleから手動で削除すること。
-
 ---
 
 ## トラブルシューティング
@@ -246,4 +304,20 @@ terraform destroy
 → `bash lambda/build.sh` を先に実行すること。
 
 ### GitHub Actionsが `AWS_ROLE_ARN` エラーで失敗する
-→ Step 7の `setup_github_secrets.sh` が完了しているか確認。
+→ Step 6の `setup_github_secrets.sh` が完了しているか確認。
+
+### terraform destroy が ECR/S3 エラーで失敗する
+→ すでに `force_delete = true` / `force_destroy = true` が設定されているため通常は発生しない。
+  それでも失敗する場合は以下を手動実行：
+  ```python
+  python3 -c "
+  import subprocess, json
+  for svc in ['fleet-service','mission-service','telemetry-service','command-service','ota-service','digital-twin-service']:
+      repo = f'robotops-{svc}'
+      r = subprocess.run(['aws','ecr','describe-images','--repository-name',repo,'--region','ap-northeast-1','--output','json'], capture_output=True, text=True)
+      ids = [{'imageDigest': i['imageDigest']} for i in json.loads(r.stdout).get('imageDetails',[])]
+      if ids:
+          subprocess.run(['aws','ecr','batch-delete-image','--repository-name',repo,'--region','ap-northeast-1','--image-ids',json.dumps(ids)])
+          print(f'{repo}: cleared')
+  "
+  ```

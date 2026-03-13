@@ -51,22 +51,27 @@ RobotOps = Robot + Ops → ロボットフリートの継続的運用
 ### フリート全体像
 
 ```
-ロボット (Python agent)
+ロボット (Python agent, TLS/mTLS X.509)
     │
-    │ MQTT (QoS 0/1)
+    │ MQTT over TLS (QoS 0/1)
     ▼
 [ローカル: Mosquitto / 本番: AWS IoT Core]
     │
-    ├─ telemetry (QoS 0, 毎秒) ──→ Kinesis → Lambda → TimescaleDB
+    ├─ telemetry (QoS 0, 毎秒) ──→ Kinesis → Lambda(telemetry-processor)
+    │                                              │
+    │                                    ┌─────────┴─────────┐
+    │                                    ▼                   ▼
+    │                              TimescaleDB          robots テーブル
+    │                             (履歴データ)        (現在位置/状態 upsert)
     │
-    └─ events   (QoS 1, 都度) ──→ EventBridge → fleet-service
-                                              → mission-service
-    │
-    ▼
-fleet-service / mission-service / command-service / ota-service
-    │
-    ▼
-Dashboard (React + Three.js)
+    └─ events   (QoS 1, 都度) ──→ Lambda(iot-event-bridge) → EventBridge
+                                                                │
+                                                  ┌─────────────┤
+                                                  ▼             ▼
+                                          fleet-service   ws-event-pusher
+                                                              │
+                                                              ▼
+                                                       WebSocket → Dashboard
 ```
 
 一見複雑に見えるが、各コンポーネントが解いている問題は明快だ。
@@ -253,6 +258,7 @@ flowchart TB
         end
 
         subgraph EVT_PIPE["⚡ Event Pipeline"]
+            L_IOT_ROUTER["Lambda\niot-event-bridge"]
             EVB["EventBridge"]
             L_EVT["Lambda\nws-event-pusher"]
             DLQ_EVT["SQS DLQ"]
@@ -273,6 +279,7 @@ flowchart TB
                 CS["command-service"]
                 TS["telemetry-service"]
                 OTA_SVC["ota-service"]
+                DT_SVC["digital-twin-service"]
             end
 
             RDS[("RDS PostgreSQL\n+ TimescaleDB\n[private subnet]")]
@@ -303,11 +310,12 @@ flowchart TB
 
     %% IoT Core → Pipelines
     IOT -- "IoT Rule: telemetry" --> KDS
-    IOT -- "IoT Rule: events" --> EVB
+    IOT -- "IoT Rule: events" --> L_IOT_ROUTER
+    L_IOT_ROUTER --> EVB
 
     %% Telemetry pipeline
     KDS --> L_TEL
-    L_TEL -- "batch upsert" --> RDS
+    L_TEL -- "batch upsert + robots table" --> RDS
     L_TEL -.->|"on failure"| DLQ_TEL
 
     %% Event pipeline
@@ -322,15 +330,15 @@ flowchart TB
 
     %% Dashboard REST
     UI -- "HTTPS" --> WAF
-    WAF --> REST_GW
+    WAF --> ALB
     REST_GW --> ALB
-    ALB --> FS & MS & CS & TS & OTA_SVC
+    ALB --> FS & MS & CS & TS & OTA_SVC & DT_SVC
 
     %% Dashboard WebSocket
     UI -- "WebSocket" --> WS_GW
 
     %% ECS → Storage
-    FS & MS & CS & TS & OTA_SVC --> RDS
+    FS & MS & CS & TS & OTA_SVC & DT_SVC --> RDS
     FS & CS --> REDIS
     OTA_SVC --> S3
 
@@ -348,8 +356,8 @@ flowchart TB
 
 | フロー | 経路 |
 |---|---|
-| **テレメトリ** | Robot → IoT Core → Kinesis → Lambda → TimescaleDB |
-| **イベント通知** | Robot → IoT Core → EventBridge → Lambda → Redis pub/sub → WebSocket → Dashboard |
+| **テレメトリ** | Robot → IoT Core → Kinesis → Lambda(telemetry-processor) → TimescaleDB / robots テーブル |
+| **イベント通知** | Robot → IoT Core → Lambda(iot-event-bridge) → EventBridge → Lambda(ws-event-pusher) → Redis pub/sub → WebSocket → Dashboard |
 | **コマンド送信** | Dashboard → WAF → REST API GW → ALB → command-service → IoT Core → Robot |
 | **OTA デプロイ** | Dashboard → WAF → REST API GW → ALB → ota-service → S3 |
 | **OTA ダウンロード** | Robot → REST API GW → ALB → ota-service (← S3) |
@@ -366,7 +374,7 @@ flowchart TB
 |---|---|---|
 | MQTT ブローカー | Mosquitto (Docker) | AWS IoT Core |
 | テレメトリ受信 | MQTT Bridge (fleet-service 内) | Kinesis → Lambda |
-| イベント処理 | MQTT Bridge → HTTP | IoT Core HTTP Action → fleet-service |
+| イベント処理 | MQTT Bridge → HTTP | IoT Core → Lambda(iot-event-bridge) → EventBridge → fleet-service |
 | ロボット認証 | なし (開発用) | mTLS X.509 証明書 |
 | WebSocket | command-service (直接) | API Gateway WebSocket |
 | ストレージ | PostgreSQL (Docker) | RDS + TimescaleDB |
@@ -394,6 +402,7 @@ sequenceDiagram
     participant KDS as Kinesis
     participant LTEL as Lambda<br>telemetry-processor
     participant DB  as RDS / TimescaleDB
+    participant LROUTER as Lambda<br>iot-event-bridge
     participant EVB as EventBridge
     participant LEVT as Lambda<br>ws-event-pusher
     participant REDIS as Redis<br>ws:connections
@@ -409,7 +418,8 @@ sequenceDiagram
     LTEL->>DB: INSERT telemetry（時系列履歴）
 
     note over IOT: IoT Rule 2（リアルタイム経路）
-    IOT->>EVB: 転送
+    IOT->>LROUTER: IoT Rule → Lambda(iot-event-bridge)
+    LROUTER->>EVB: 転送
     EVB->>LEVT: 起動
     LEVT->>REDIS: SMEMBERS ws:connections
     REDIS-->>LEVT: [conn_id_1, conn_id_2, ...]
@@ -427,7 +437,8 @@ sequenceDiagram
 | 3 | **Kinesis** | 2 shards で最大 100 ロボット × 1 s を受け止める |
 | 4 | **Lambda telemetry-processor** | バッチで起動、RDS `robots` テーブルを UPSERT（最新状態） |
 | 5 | **Lambda telemetry-processor** | TimescaleDB `telemetry` テーブルに INSERT（時系列履歴） |
-| 6 | **AWS IoT Core** | IoT Rule 2 → **EventBridge** へも転送（リアルタイム経路） |
+| 6 | **AWS IoT Core** | IoT Rule 2 → **Lambda(iot-event-bridge)** へ転送（リアルタイム経路） |
+| 6a | **Lambda iot-event-bridge** | EventBridge へイベントを転送（IoT Core は EventBridge を直接ターゲットにできないため Lambda 経由） |
 | 7 | **Lambda ws-event-pusher** | EventBridge に起動される。Redis `ws:connections` から接続中ブラウザ ID を全取得 |
 | 8 | **WebSocket API GW** | `post_to_connection()` で各ブラウザに `telemetry_update` を push |
 | 9 | **Dashboard** | WebSocket メッセージ受信 → Three.js マップ・Recharts グラフをリアルタイム更新 |
@@ -477,7 +488,7 @@ sequenceDiagram
     IOT->>FS: events（robot/{id}/events）
     FS->>OTA: PATCH /ota/jobs/{id}（status: completed）
 
-    IOT->>EVB: IoT Rule（events）
+    IOT->>EVB: IoT Rule → Lambda(iot-event-bridge) → EventBridge
     EVB->>WS: Lambda ws-event-pusher
     WS-->>DASH: WebSocket push（OTA 完了通知）
 ```
@@ -537,7 +548,7 @@ sequenceDiagram
 
     loop 清掃中（毎秒テレメトリ）
         R->>IOT: MQTT QoS 0 — telemetry
-        IOT->>EVB: IoT Rule
+        IOT->>EVB: IoT Rule → Lambda(iot-event-bridge) → EventBridge
         EVB->>WS: Lambda ws-event-pusher
         WS-->>DASH: WebSocket push（進捗更新）
     end
@@ -545,7 +556,7 @@ sequenceDiagram
     R->>IOT: MQTT QoS 1 — MissionCompleted event
     IOT->>FS: events
     FS->>MS: PATCH /missions/{id}（status: completed）
-    IOT->>EVB: IoT Rule
+    IOT->>EVB: IoT Rule → Lambda(iot-event-bridge) → EventBridge
     EVB->>WS: Lambda ws-event-pusher
     WS-->>DASH: WebSocket push（ミッション完了）
 ```

@@ -60,8 +60,9 @@ with Diagram(
                 ECS("command-service"),
                 ECS("telemetry-service"),
                 ECS("ota-service"),
+                ECS("digital-twin-service"),
             ]
-            fleet_svc, miss_svc, cmd_svc, telem_svc, ota_svc = svcs
+            fleet_svc, miss_svc, cmd_svc, telem_svc, ota_svc, twin_svc = svcs
 
         with Cluster("Storage  [private subnet]"):
             rds   = RDS("RDS PostgreSQL\n+ TimescaleDB")
@@ -76,6 +77,7 @@ with Diagram(
         dlq1    = SQS("SQS DLQ")
 
     with Cluster("Event Pipeline"):
+        liot_router = Lambda("Lambda\niot-event-bridge")
         evb   = Eventbridge("EventBridge")
         levt  = Lambda("Lambda\nws-event-pusher")
         dlq2  = SQS("SQS DLQ")
@@ -96,8 +98,8 @@ with Diagram(
     dashboard >> Edge(label="WebSocket", color="#ce93d8") >> ws_gw
     ws_gw >> Edge(label="server push", color="#ce93d8", style="dashed") >> dashboard
 
-    # API layer internal
-    waf >> rest_gw
+    # API layer internal — WAF attaches to ALB
+    waf >> alb
     rest_gw >> alb
 
     # WebSocket mgr
@@ -105,23 +107,24 @@ with Diagram(
     lconn >> ws_gw
 
     # ALB → ECS
-    alb >> [fleet_svc, miss_svc, cmd_svc, telem_svc, ota_svc]
+    alb >> [fleet_svc, miss_svc, cmd_svc, telem_svc, ota_svc, twin_svc]
 
     # ECS → Storage
-    [fleet_svc, miss_svc, cmd_svc, telem_svc, ota_svc] >> rds
+    [fleet_svc, miss_svc, cmd_svc, telem_svc, ota_svc, twin_svc] >> rds
     [fleet_svc, cmd_svc] >> redis
     ota_svc >> s3
 
     # command-service → IoT Core
     cmd_svc >> Edge(label="MQTT publish", color="#ffb74d") >> iot
 
-    # IoT Core ↔ Pipelines
+    # IoT Core → Pipelines
     iot >> Edge(label="IoT Rule", color="#4fc3f7") >> kinesis
-    iot >> Edge(label="IoT Rule", color="#81c784") >> evb
+    iot >> Edge(label="IoT Rule", color="#81c784") >> liot_router
+    liot_router >> Edge(color="#81c784") >> evb
 
     # Telemetry pipeline
     kinesis >> ltel
-    ltel >> Edge(label="batch upsert", color="#4fc3f7") >> rds
+    ltel >> Edge(label="batch upsert\n+ robots table", color="#4fc3f7") >> rds
     ltel >> Edge(color="#ef5350", style="dashed") >> dlq1
 
     # Event pipeline
@@ -141,4 +144,4 @@ with Diagram(
     # CI/CD
     github >> ecr >> Edge(label="deploy") >> alb
 
-print(f"✅  Saved: {output_path}.png")
+print(f"Saved: {output_path}.png")

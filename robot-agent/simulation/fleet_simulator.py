@@ -29,6 +29,9 @@ def create_robot(
     broker: str,
     port: int,
     telemetry_interval: float,
+    tls_cert: str = None,
+    tls_key: str = None,
+    tls_ca: str = None,
 ) -> RobotAgent:
     robot_id = f"robot_{robot_index:03d}"
     initial_state = RobotState(
@@ -45,6 +48,9 @@ def create_robot(
         mqtt_port=port,
         telemetry_interval=telemetry_interval,
         initial_state=initial_state,
+        tls_cert=tls_cert,
+        tls_key=tls_key,
+        tls_ca=tls_ca,
     )
 
 
@@ -54,6 +60,9 @@ def main():
     parser.add_argument("--broker",   type=str,   default="localhost", help="MQTT broker host")
     parser.add_argument("--port",     type=int,   default=1883, help="MQTT broker port")
     parser.add_argument("--interval", type=float, default=0.5,  help="Telemetry interval (seconds)")  # noqa: E501
+    parser.add_argument("--cert",     type=str,   default=None, help="TLS certificate file (for AWS IoT Core)")
+    parser.add_argument("--key",      type=str,   default=None, help="TLS private key file (for AWS IoT Core)")
+    parser.add_argument("--ca",       type=str,   default=None, help="CA certificate file (for AWS IoT Core)")
     args = parser.parse_args()
 
     logger.info(f"Starting fleet simulator: {args.robots} robots → {args.broker}:{args.port}")
@@ -62,7 +71,8 @@ def main():
     threads: list[Thread] = []
 
     for i in range(1, args.robots + 1):
-        agent = create_robot(i, args.broker, args.port, args.interval)
+        agent = create_robot(i, args.broker, args.port, args.interval,
+                             tls_cert=args.cert, tls_key=args.key, tls_ca=args.ca)
         agents.append(agent)
 
         t = Thread(target=agent.start, daemon=True, name=f"robot_{i:03d}")

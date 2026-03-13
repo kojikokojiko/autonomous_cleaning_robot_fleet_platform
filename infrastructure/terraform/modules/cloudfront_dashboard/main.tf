@@ -11,8 +11,9 @@ locals {
 # S3 Bucket — Dashboard Static Files
 # ============================================================
 resource "aws_s3_bucket" "dashboard" {
-  bucket = "${local.name}-dashboard-${var.account_id}"
-  tags   = local.tags
+  bucket        = "${local.name}-dashboard-${var.account_id}"
+  force_destroy = true
+  tags          = local.tags
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "dashboard" {

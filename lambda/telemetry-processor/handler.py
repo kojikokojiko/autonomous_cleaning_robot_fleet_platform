@@ -93,7 +93,7 @@ def _parse_telemetry(payload: dict) -> dict | None:
 
 
 def _batch_insert(rows: list[dict]) -> None:
-    insert_sql = """
+    telemetry_sql = """
         INSERT INTO telemetry (
             time, robot_id, battery_level,
             position_x, position_y, position_floor,
@@ -102,7 +102,7 @@ def _batch_insert(rows: list[dict]) -> None:
         ) VALUES %s
         ON CONFLICT DO NOTHING
     """
-    values = [
+    telemetry_values = [
         (
             r["time"], r["robot_id"], r["battery_level"],
             r["position_x"], r["position_y"], r["position_floor"],
@@ -115,7 +115,31 @@ def _batch_insert(rows: list[dict]) -> None:
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            psycopg2.extras.execute_values(cur, insert_sql, values)
+            # Insert telemetry history
+            psycopg2.extras.execute_values(cur, telemetry_sql, telemetry_values)
+
+            # Upsert robots table: auto-register + update position/status/battery
+            for r in rows:
+                cur.execute("""
+                    INSERT INTO robots (robot_id, name, facility, status, battery_level, position, last_seen)
+                    VALUES (%(robot_id)s, %(robot_id)s, 'office_building_a', %(status)s,
+                            %(battery)s,
+                            jsonb_build_object('x', %(px)s, 'y', %(py)s, 'floor', %(floor)s),
+                            NOW())
+                    ON CONFLICT (robot_id) DO UPDATE SET
+                        status       = EXCLUDED.status,
+                        battery_level = EXCLUDED.battery_level,
+                        position     = EXCLUDED.position,
+                        last_seen    = NOW(),
+                        updated_at   = NOW()
+                """, {
+                    "robot_id": r["robot_id"],
+                    "status":   r["nav_status"] or "idle",
+                    "battery":  r["battery_level"],
+                    "px":       r["position_x"],
+                    "py":       r["position_y"],
+                    "floor":    r["position_floor"] or 1,
+                })
         conn.commit()
     finally:
         conn.close()

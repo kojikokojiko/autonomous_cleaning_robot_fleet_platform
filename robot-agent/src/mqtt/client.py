@@ -25,6 +25,9 @@ class RobotMQTTClient:
         on_command: Optional[Callable] = None,
         on_mission: Optional[Callable] = None,
         on_ota: Optional[Callable] = None,
+        tls_cert: Optional[str] = None,
+        tls_key: Optional[str] = None,
+        tls_ca: Optional[str] = None,
     ):
         self.robot_id = robot_id
         self.broker = broker
@@ -38,6 +41,14 @@ class RobotMQTTClient:
             client_id=robot_id,
             clean_session=False,
         )
+
+        # TLS for AWS IoT Core
+        if tls_cert and tls_key and tls_ca:
+            self.client.tls_set(
+                ca_certs=tls_ca,
+                certfile=tls_cert,
+                keyfile=tls_key,
+            )
         self.client.on_connect = self._on_connect
         self.client.on_disconnect = self._on_disconnect
         self.client.on_message = self._on_message

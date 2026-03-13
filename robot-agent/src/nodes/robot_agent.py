@@ -143,6 +143,9 @@ class RobotAgent:
         mqtt_port: int = 1883,
         telemetry_interval: float = 2.0,
         initial_state: Optional[RobotState] = None,
+        tls_cert: Optional[str] = None,
+        tls_key: Optional[str] = None,
+        tls_ca: Optional[str] = None,
     ):
         self.robot_id = robot_id
         self.telemetry_interval = telemetry_interval
@@ -163,6 +166,9 @@ class RobotAgent:
             on_command=self._handle_command,
             on_mission=self._handle_mission,
             on_ota=self._handle_ota,
+            tls_cert=tls_cert,
+            tls_key=tls_key,
+            tls_ca=tls_ca,
         )
         self._load_config()  # restore persisted config from previous OTA
 

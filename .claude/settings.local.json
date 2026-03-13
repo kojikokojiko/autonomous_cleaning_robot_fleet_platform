@@ -12,7 +12,9 @@
       "Bash(docker stop:*)",
       "Bash(/Users/koji.iwase/.pyenv/versions/3.12.3/bin/pip show:*)",
       "Bash(~/.pyenv/versions/3.12.3/bin/python3.12:*)",
-      "Bash(pyenv exec:*)"
+      "Bash(pyenv exec:*)",
+      "Bash(aws logs:*)",
+      "Bash(aws lambda:*)"
     ]
   }
 }
